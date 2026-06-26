@@ -1737,7 +1737,9 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
             <markdown
               syntaxStyle={syntax()}
               streaming={true}
+              internalBlockMode="top-level"
               content={props.part.text.trim()}
+              tableOptions={{ style: "grid" }}
               conceal={ctx.conceal()}
               fg={theme.markdownText}
               bg={theme.background}
