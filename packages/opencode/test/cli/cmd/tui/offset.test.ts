@@ -79,6 +79,17 @@ describe("offset conversion", () => {
       index += ch.length
     }
   })
+
+  test("sums width per code point for ZWJ/modifier sequences (matching the editor, not graphemes)", () => {
+    // The editor advances its offset by the wcwidth of EACH code point, so a ZWJ
+    // family emoji is width 6 and a skin-tone emoji is width 4 — verified against
+    // @opentui/core. A grapheme-cluster pass would report width 2 and desync, so
+    // these guard against an accidental "upgrade" to Intl.Segmenter.
+    const family = "👨‍👩‍👧" // 5 code points, editor width 6
+    expect(stringIndexToWidth(family, family.length)).toBe(6)
+    const skin = "👍🏽" // 2 code points, editor width 4
+    expect(stringIndexToWidth(skin, skin.length)).toBe(4)
+  })
 })
 
 describe("charAfterCursor", () => {

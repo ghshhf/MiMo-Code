@@ -5,6 +5,14 @@
 // Inputs are assumed to sit on character (code-point) boundaries, which is all
 // the editor ever emits; an offset landing inside a wide char rounds up to the
 // next boundary.
+//
+// We iterate per CODE POINT (for..of), not per grapheme cluster. This is
+// deliberate and matches the editor exactly: the editor advances its offset by
+// the wcwidth of each code point independently, so an emoji ZWJ sequence like
+// "👨‍👩‍👧" is width 6 (not 2) and "👍🏽" is width 4 (not 2) — verified against
+// @opentui/core. A grapheme-based pass (Intl.Segmenter) would treat those as a
+// single width-2 unit and desync from the editor, so do NOT "upgrade" this to
+// graphemes.
 
 // The editor advances its offset by 1 for a newline and 2 for a tab, but
 // Bun.stringWidth returns 0 for both, so we special-case them to stay aligned
@@ -36,6 +44,13 @@ export function stringIndexToWidth(text: string, stringIndex: number): number {
     index += ch.length
   }
   return width
+}
+
+// The full display-width of a string, in the editor's coordinate system. Use
+// this (not text.length) whenever an extmark end is derived from inserted text,
+// so the span matches the editor's width-based offsets even for wide chars.
+export function promptOffsetWidth(text: string): number {
+  return stringIndexToWidth(text, text.length)
 }
 
 // The character immediately after a width-based cursor offset, or undefined at

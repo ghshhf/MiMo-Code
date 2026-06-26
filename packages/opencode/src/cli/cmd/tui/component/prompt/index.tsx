@@ -17,6 +17,7 @@ import { createStore, produce, unwrap } from "solid-js/store"
 import { useKeybind } from "@tui/context/keybind"
 import { usePromptHistory, type PromptInfo } from "./history"
 import { assign, expandPlaceholders } from "./part"
+import { promptOffsetWidth, stringIndexToWidth } from "./offset"
 import { usePromptStash } from "./stash"
 import { DialogStash } from "../dialog-stash"
 import { type AutocompleteRef, Autocomplete } from "./autocomplete"
@@ -640,11 +641,15 @@ export function Prompt(props: PromptProps) {
 
               if (!virtualText) return part
 
-              const newStart = content.indexOf(virtualText)
+              const charStart = content.indexOf(virtualText)
               // if the virtual text is deleted, remove the part
-              if (newStart === -1) return null
+              if (charStart === -1) return null
 
-              const newEnd = newStart + virtualText.length
+              // indexOf returns a UTF-16 index, but extmark start/end are
+              // display-width offsets; convert so CJK before the virtual text
+              // doesn't shift the restored extmark left.
+              const newStart = stringIndexToWidth(content, charStart)
+              const newEnd = newStart + promptOffsetWidth(virtualText)
 
               if (part.type === "file" && part.source?.text) {
                 return {
@@ -682,7 +687,9 @@ export function Prompt(props: PromptProps) {
             parts: updatedNonTextParts,
           })
           restoreExtmarksFromParts(updatedNonTextParts)
-          input.cursorOffset = Bun.stringWidth(content)
+          // promptOffsetWidth (not Bun.stringWidth) so newlines/tabs in the
+          // edited content put the cursor at the true end of buffer.
+          input.cursorOffset = promptOffsetWidth(content)
         },
       },
       {
@@ -1213,7 +1220,7 @@ export function Prompt(props: PromptProps) {
   function pasteText(text: string, virtualText: string) {
     const currentOffset = input.visualCursor.offset
     const extmarkStart = currentOffset
-    const extmarkEnd = extmarkStart + virtualText.length
+    const extmarkEnd = extmarkStart + promptOffsetWidth(virtualText)
 
     input.insertText(virtualText + " ")
 
@@ -1330,7 +1337,7 @@ export function Prompt(props: PromptProps) {
       return x.mime.startsWith("image/")
     }).length
     const virtualText = pdf ? `[PDF ${count + 1}]` : `[Image ${count + 1}]`
-    const extmarkEnd = extmarkStart + virtualText.length
+    const extmarkEnd = extmarkStart + promptOffsetWidth(virtualText)
     const textToInsert = virtualText + " "
 
     input.insertText(textToInsert)
