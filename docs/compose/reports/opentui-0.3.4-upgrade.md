@@ -1,30 +1,29 @@
 ---
-feature: tui-paste-highlight-cjk
+feature: opentui-0.3.4-upgrade
 status: delivered
 specs: []
 plans: []
 branch: fix/tui-paste-highlight-cjk-opentui-0.3.4
-commits: 98df392..357a4ba
+commits: 98df392..41137a6
 ---
 
-# TUI Paste-Highlight Drift with CJK Input — Final Report
+# Upgrade @opentui/core to 0.3.4 — Final Report
 
 ## What Was Built
 
-The TUI prompt's paste placeholder (the yellow `[Pasted ~N lines]` /
-`[Image N]` / `[PDF N]` / `[SVG: …]` span) now stays correctly anchored to its
-content when the surrounding text contains wide characters. Previously, typing
-CJK (Chinese/Japanese/Korean) before a paste placeholder made the highlight
-slide left off the placeholder, one column per wide character, and corrupted the
-submit position. The fix upgrades `@opentui/core` from 0.1.101 to 0.3.4 — the
-same line upstream opencode ships — and aligns the prompt's application-layer
-coordinate conversions so display-width offsets and UTF-16 string indices never
-get mixed.
+`@opentui/core` / `@opentui/solid` were upgraded from 0.1.101 to 0.3.4 (the line
+upstream opencode 1.17.x ships), which fixes two TUI issues at once and aligns
+our TUI with upstream:
 
-The same opentui 0.3.4 upgrade also unblocks a second fix in the same render
-path: assistant text now renders through opentui's `<markdown>` with
-`internalBlockMode="top-level"`, so streaming output no longer flashes raw
-markdown markers (`-`, `##`, `**`) on already-settled lines as the message grows.
+1. **Paste-highlight drift with CJK.** The paste placeholder (the yellow
+   `[Pasted ~N lines]` / `[Image N]` / `[PDF N]` / `[SVG: …]` span) now stays
+   anchored to its content when wide characters surround it. Previously, typing
+   CJK before a placeholder slid the highlight left one column per wide char and
+   corrupted the submit position. The application layer was also tightened so
+   display-width offsets and UTF-16 string indices never get mixed.
+2. **Streaming markdown flicker.** Assistant text rendered through opentui's
+   `<markdown>` no longer flashes raw markers (`-`, `##`, `**`) on already-settled
+   lines as new content streams in.
 
 ## Architecture
 
