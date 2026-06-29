@@ -24,6 +24,10 @@ import { webviewZoom } from "./webview-zoom"
 import "./styles.css"
 import { useTheme } from "@mimo-ai/ui/theme"
 
+// 导入重构后的布局（实验性）
+import { AppLayout } from "./components/layout/AppLayout"
+import "./new-styles.css"
+
 const root = document.getElementById("root")
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error(t("error.dev.rootNotFound"))
@@ -302,6 +306,16 @@ render(() => {
     }
   }
 
+  // 快捷键切换新布局 (Ctrl+Shift+D)
+  document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "D") {
+      e.preventDefault()
+      const current = localStorage.getItem("mimo-redesign") === "true"
+      localStorage.setItem("mimo-redesign", (!current).toString())
+      window.location.reload()
+    }
+  })
+
   function Inner() {
     const cmd = useCommand()
     menuTrigger = (id) => cmd.trigger(id)
@@ -340,6 +354,13 @@ render(() => {
           }
         >
           {(_) => {
+            // 检查是否启用新布局（通过 localStorage 切换）
+            const useNewLayout = localStorage.getItem("mimo-redesign") === "true"
+            
+            if (useNewLayout) {
+              return <AppLayout />
+            }
+            
             return (
               <AppInterface
                 defaultServer={defaultServer.latest ?? ServerConnection.Key.make("sidecar")}
