@@ -256,6 +256,16 @@ MiMoCode is built as a fork of [OpenCode](https://github.com/anomalyco/opencode)
 
 ---
 
+## MiMo Ecosystem
+
+Want to use Xiaomi MiMo models in other agents and coding assistants too?
+
+👉 **[awesome-mimo-agent](https://github.com/XiaomiMiMo/awesome-mimo-agent)** — a curated list of guides for integrating MiMo models into popular AI agent and coding-assistant tools (Cursor, Cline, Zed, and more).
+
+If you've integrated MiMo into a tool, contributions are welcome — open an issue or PR there to add your guide.
+
+---
+
 ## Community
 
 Scan the QR code to join the community group chat:
