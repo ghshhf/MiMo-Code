@@ -5,6 +5,13 @@ import { Show, createSignal, onCleanup } from "solid-js"
 import { Sidebar } from "../sidebar/Sidebar"
 import { ChatPanel } from "../chat/ChatPanel"
 import { AgentPanel } from "../agent/AgentPanel"
+import { MemoryPanel } from "../memory/MemoryPanel"
+import { SettingsPanel } from "../settings/SettingsPanel"
+
+import "./AppLayout-styles.css"
+import "../memory/memory-styles.css"
+import "../agent/agent-styles.css"
+import "../settings/settings-styles.css"
 
 export type PanelType = "chat" | "agent" | "memory" | "settings"
 
@@ -66,17 +73,11 @@ export function AppLayout() {
         </Show>
         
         <Show when={activePanel() === "memory"}>
-          <div class="placeholder-panel">
-            <h2>📝 记忆系统</h2>
-            <p>正在开发中...</p>
-          </div>
+          <MemoryPanel />
         </Show>
         
         <Show when={activePanel() === "settings"}>
-          <div class="placeholder-panel">
-            <h2>⚙️ 设置</h2>
-            <p>正在开发中...</p>
-          </div>
+          <SettingsPanel />
         </Show>
       </main>
 
