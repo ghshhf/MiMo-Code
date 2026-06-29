@@ -27,6 +27,7 @@ import { useTheme } from "@mimo-ai/ui/theme"
 // 导入重构后的布局（实验性）
 import { AppLayout } from "./components/layout/AppLayout"
 import "./new-styles.css"
+import "./agent-styles.css"
 
 const root = document.getElementById("root")
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {

@@ -1,0 +1,197 @@
+/* ==================== */
+/* Agent 面板样式 */
+/* ==================== */
+
+.agent-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-bg-base);
+}
+
+.agent-header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agent-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.agent-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.agent-actions .action-btn {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-base);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.agent-actions .action-btn:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-primary);
+}
+
+/* Agent 列表 */
+.agent-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.agent-card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.agent-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.agent-card.active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.agent-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+}
+
+.agent-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.agent-icon {
+  font-size: 20px;
+}
+
+.agent-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.agent-status {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+/* 进度条 */
+.progress-bar {
+  height: 4px;
+  background: var(--color-bg-active);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: var(--spacing-sm) 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width 0.3s ease;
+}
+
+.current-task {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-sm);
+}
+
+/* Agent 卡片操作 */
+.agent-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-sm);
+}
+
+.stop-btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.stop-btn:hover {
+  background: #dc2626;
+}
+
+.completed-badge {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* Agent 步骤 */
+.agent-steps {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.step-item.running {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.step-item.completed {
+  color: #10b981;
+}
+
+.step-item.error {
+  color: #ef4444;
+}
+
+.step-icon {
+  width: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.step-name {
+  flex: 1;
+}
+
+.step-duration {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
