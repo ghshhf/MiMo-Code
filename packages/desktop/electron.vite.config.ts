@@ -1,6 +1,7 @@
 import { defineConfig } from "electron-vite"
 import appPlugin from "@mimo-ai/app/vite"
 import * as fs from "node:fs/promises"
+import * as path from "node:path"
 
 const channel = (() => {
   const raw = process.env.OPENCODE_CHANNEL
@@ -20,6 +21,15 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: { index: "src/main/index.ts" },
+        external: [
+          "electron",
+          /opencode\/dist\/node\/node\.js/,
+          /opencode\/dist\/.*/,
+        ],
+        output: {
+          format: "cjs",
+          entryFileNames: "[name].js",
+        },
       },
       externalizeDeps: { include: [nodePtyPkg] },
     },
@@ -41,10 +51,21 @@ export default defineConfig({
       {
         name: "opencode:copy-server-assets",
         async writeBundle() {
-          for (const l of await fs.readdir(OPENCODE_SERVER_DIST)) {
+          const srcDir = path.resolve(__dirname, OPENCODE_SERVER_DIST)
+          const destDir = path.resolve(__dirname, "out", "main", "chunks")
+          await fs.mkdir(destDir, { recursive: true }).catch(() => {})
+          for (const l of await fs.readdir(srcDir)) {
             if (!l.endsWith(".wasm")) continue
-            await fs.writeFile(`./out/main/chunks/${l}`, await fs.readFile(`${OPENCODE_SERVER_DIST}/${l}`))
+            const src = path.join(srcDir, l)
+            const dest = path.join(destDir, l)
+            console.log(`[copy-server-assets] ${src} -> ${dest}`)
+            await fs.writeFile(dest, await fs.readFile(src))
           }
+          // 添加 CJS package.json 以确保 out/main/ 被当作 CJS
+          await fs.writeFile(
+            path.resolve(__dirname, "out", "main", "package.json"),
+            JSON.stringify({ type: "commonjs" }, null, 2)
+          )
         },
       },
     ],

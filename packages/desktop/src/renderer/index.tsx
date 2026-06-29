@@ -26,6 +26,7 @@ import { useTheme } from "@mimo-ai/ui/theme"
 
 // 导入重构后的布局（实验性）
 import { AppLayout } from "./components/layout/AppLayout"
+import { AppStoreProvider } from "./stores/AppStore"
 import "./new-styles.css"
 import "./agent-styles.css"
 
@@ -359,7 +360,11 @@ render(() => {
             const useNewLayout = localStorage.getItem("mimo-redesign") === "true"
             
             if (useNewLayout) {
-              return <AppLayout />
+              return (
+                <AppStoreProvider>
+                  <AppLayout />
+                </AppStoreProvider>
+              )
             }
             
             return (

@@ -1,13 +1,14 @@
 // AppLayout.tsx - 新的应用布局组件
-// 这是桌面版重构的第一步：创建现代化的布局系统
+// 使用全局状态管理（AppStore）替代本地状态
 
-import { Show, createSignal, onCleanup } from "solid-js"
+import { Show } from "solid-js"
 import { Sidebar } from "../sidebar/Sidebar"
 import { ChatPanel } from "../chat/ChatPanel"
 import { AgentPanel } from "../agent/AgentPanel"
 import { MemoryPanel } from "../memory/MemoryPanel"
 import { SettingsPanel } from "../settings/SettingsPanel"
 import { ProjectPanel } from "../project/ProjectPanel"
+import { useAppStore } from "../../stores/AppStore"
 
 import "./AppLayout-styles.css"
 import "../memory/memory-styles.css"
@@ -18,89 +19,56 @@ import "../project/project-styles.css"
 export type PanelType = "chat" | "agent" | "memory" | "settings" | "project"
 
 export function AppLayout() {
-  const [activePanel, setActivePanel] = createSignal<PanelType>("chat")
-  const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false)
-
-  // 键盘快捷键
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      switch (e.key) {
-        case "b":
-          e.preventDefault()
-          setSidebarCollapsed(!sidebarCollapsed())
-          break
-        case "1":
-          e.preventDefault()
-          setActivePanel("chat")
-          break
-        case "2":
-          e.preventDefault()
-          setActivePanel("agent")
-          break
-        case "3":
-          e.preventDefault()
-          setActivePanel("project")
-          break
-        case "4":
-          e.preventDefault()
-          setActivePanel("memory")
-          break
-        case "5":
-          e.preventDefault()
-          setActivePanel("settings")
-          break
-      }
-    }
-  }
-
-  onCleanup(() => {
-    document.removeEventListener("keydown", handleKeyDown)
-  })
+  const store = useAppStore()
 
   return (
-    <div class="app-layout" onKeyDown={handleKeyDown}>
+    <div class="app-layout">
       {/* 侧边栏 */}
-      <Show when={!sidebarCollapsed()}>
-        <Sidebar
-          activePanel={activePanel()}
-          onPanelChange={setActivePanel}
-          onToggleCollapse={() => setSidebarCollapsed(true)}
-        />
-      </Show>
+      <Sidebar
+        activePanel={store.activePanel() as PanelType}
+        sidebarCollapsed={store.sidebarCollapsed()}
+        onPanelChange={(panel: PanelType) => store.setActivePanel(panel)}
+        onToggleCollapse={() => store.toggleSidebar()}
+      />
 
       {/* 主内容区 */}
       <main class="main-content">
-        <Show when={activePanel() === "chat"}>
+        <Show when={store.activePanel() === "chat"}>
           <ChatPanel />
         </Show>
-        
-        <Show when={activePanel() === "agent"}>
+
+        <Show when={store.activePanel() === "agent"}>
           <AgentPanel />
         </Show>
-        
-        <Show when={activePanel() === "project"}>
+
+        <Show when={store.activePanel() === "project"}>
           <ProjectPanel />
         </Show>
-        
-        <Show when={activePanel() === "memory"}>
+
+        <Show when={store.activePanel() === "memory"}>
           <MemoryPanel />
         </Show>
-        
-        <Show when={activePanel() === "settings"}>
+
+        <Show when={store.activePanel() === "settings"}>
           <SettingsPanel />
         </Show>
       </main>
 
       {/* 状态栏 */}
       <footer class="status-bar">
-        <span class="status-item">✅ 就绪</span>
-        <span class="status-item">📂 {activePanel()}</span>
-        <button
-          class="collapse-btn"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed())}
-        >
-          {sidebarCollapsed() ? "»" : "«"}
-        </button>
+        <div class="status-left">
+          <span class="status-indicator" classList={{
+            connected: store.sidecar()?.connected,
+            disconnected: !store.sidecar()?.connected,
+          }}>
+            {store.sidecar()?.connected ? "● 侧车已连接" : "○ 侧车未连接"}
+          </span>
+        </div>
+        <div class="status-right">
+          <span class="status-item">面板: {store.activePanel()}</span>
+          <span class="status-item">主题: {store.settings.theme}</span>
+          <span class="status-item">v0.1.4</span>
+        </div>
       </footer>
     </div>
   )

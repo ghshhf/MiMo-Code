@@ -1,31 +1,14 @@
-// ChatPanel.tsx - 功能完整的对话界面组件
+// ChatPanel.tsx - 接入 API 的对话界面组件
 
-import { createSignal, For, Show, onMount, onCleanup } from "solid-js"
-
-export interface Message {
-  id: string
-  role: "user" | "assistant" | "system"
-  content: string
-  timestamp: Date
-  isStreaming?: boolean
-}
+import { createSignal, For, Show, createEffect } from "solid-js"
+import { useAppStore, type ChatMessage } from "../../stores/AppStore"
+import { sendChatMessage } from "../../stores/api"
 
 export function ChatPanel() {
-  const [messages, setMessages] = createSignal<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "你好！我是 MiMo AI 助手。有什么可以帮你的吗？\n\n我可以帮你：\n- 📝 编写和解释代码\n- 🔍 分析项目结构\n- 🐛 调试问题\n- 📚 生成文档",
-      timestamp: new Date(),
-    }
-  ])
-  
+  const store = useAppStore()
   const [input, setInput] = createSignal("")
   const [isLoading, setIsLoading] = createSignal(false)
-  const [sessions, setSessions] = createSignal<{id: string, title: string}[]>([
-    { id: "1", title: "新对话" }
-  ])
-  const [currentSession, setCurrentSession] = createSignal("1")
+  const [streamingContent, setStreamingContent] = createSignal("")
 
   // 发送消息
   const sendMessage = async () => {
@@ -33,30 +16,35 @@ export function ChatPanel() {
     if (!content || isLoading()) return
 
     // 添加用户消息
-    const userMessage: Message = {
+    const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: "user",
       content,
       timestamp: new Date(),
     }
-    setMessages([...messages(), userMessage])
+    store.addMessage(userMsg)
     setInput("")
     setIsLoading(true)
+    setStreamingContent("")
 
-    // 模拟 AI 回复（后续接入真实 API）
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: `收到你的消息："${content}"\n\n这是模拟回复。后续会接入真实的 MiMo API。`,
-        timestamp: new Date(),
-      }
-      setMessages([...messages(), aiMessage])
-      setIsLoading(false)
-    }, 1000)
+    // 调用 API（优先侧车，降级到模拟）
+    const reply = await sendChatMessage(content, (chunk) => {
+      setStreamingContent(prev => prev + chunk)
+    })
+
+    // 添加 AI 回复
+    const aiMsg: ChatMessage = {
+      id: (Date.now() + 1).toString(),
+      role: "assistant",
+      content: reply,
+      timestamp: new Date(),
+    }
+    store.addMessage(aiMsg)
+    setStreamingContent("")
+    setIsLoading(false)
   }
 
-  // 处理键盘事件
+  // 键盘事件
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
@@ -64,47 +52,23 @@ export function ChatPanel() {
     }
   }
 
-  // 清空对话
-  const clearMessages = () => {
-    setMessages([
-      {
-        id: "1",
-        role: "assistant",
-        content: "对话已清空。有什么可以帮你的吗？",
-        timestamp: new Date(),
-      }
-    ])
-  }
-
-  // 新建对话
-  const newSession = () => {
-    const newId = Date.now().toString()
-    setSessions([...sessions(), { id: newId, title: "新对话" }])
-    setCurrentSession(newId)
-    setMessages([
-      {
-        id: "1",
-        role: "assistant",
-        content: "开始新对话。有什么可以帮你的吗？",
-        timestamp: new Date(),
-      }
-    ])
-  }
-
   return (
     <div class="chat-panel">
       {/* 顶部工具栏 */}
       <div class="chat-header">
         <div class="header-left">
-          <button class="icon-btn" onClick={newSession} title="新建对话">
-            ➕ 新对话
-          </button>
+          <span class="session-count">{store.sessions().length} 个会话</span>
         </div>
         <div class="header-center">
-          <span class="session-title">💬 智能对话</span>
+          <span class="session-title">
+            💬 {store.currentSession()?.title || "智能对话"}
+          </span>
         </div>
         <div class="header-right">
-          <button class="icon-btn" onClick={clearMessages} title="清空对话">
+          <button class="icon-btn" onClick={() => store.newSession()} title="新建对话">
+            ➕ 新建
+          </button>
+          <button class="icon-btn" onClick={() => store.clearMessages()} title="清空消息">
             🗑️ 清空
           </button>
         </div>
@@ -112,7 +76,7 @@ export function ChatPanel() {
 
       {/* 消息列表 */}
       <div class="chat-messages" id="message-list">
-        <For each={messages()}>
+        <For each={store.currentSession()?.messages || []}>
           {(message) => (
             <div class="message" classList={{ user: message.role === "user", assistant: message.role === "assistant" }}>
               <div class="message-avatar">
@@ -130,10 +94,12 @@ export function ChatPanel() {
                 <div class="message-content">
                   <pre>{message.content}</pre>
                 </div>
-                <Show when={message.role === "assistant" && !message.isStreaming}>
+                <Show when={message.role === "assistant"}>
                   <div class="message-actions">
-                    <button class="action-btn-sm" title="复制">📋 复制</button>
-                    <button class="action-btn-sm" title="应用代码">✅ 应用</button>
+                    <button class="action-btn-sm" title="复制"
+                      onClick={() => navigator.clipboard.writeText(message.content)}>
+                      📋 复制
+                    </button>
                   </div>
                 </Show>
               </div>
@@ -141,15 +107,29 @@ export function ChatPanel() {
           )}
         </For>
 
-        {/* 加载指示器 */}
-        <Show when={isLoading()}>
+        {/* 流式输出 */}
+        <Show when={streamingContent()}>
+          <div class="message assistant">
+            <div class="message-avatar">🤖</div>
+            <div class="message-wrapper">
+              <div class="message-meta">
+                <span class="message-role">MiMo AI</span>
+                <span class="message-time">正在输入...</span>
+              </div>
+              <div class="message-content">
+                <pre>{streamingContent()}</pre>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* 等待指示器 */}
+        <Show when={isLoading() && !streamingContent()}>
           <div class="message assistant">
             <div class="message-avatar">🤖</div>
             <div class="message-wrapper">
               <div class="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span></span><span></span><span></span>
               </div>
             </div>
           </div>
@@ -159,8 +139,8 @@ export function ChatPanel() {
       {/* 输入区域 */}
       <div class="chat-input-area">
         <div class="input-toolbar">
-          <button class="toolbar-btn" title="上传文件">📎</button>
-          <button class="toolbar-btn" title="语音输入">🎤</button>
+          <button class="toolbar-btn" title="上传文件" disabled={isLoading()}>📎</button>
+          <button class="toolbar-btn" title="语音输入" disabled={isLoading()}>🎤</button>
         </div>
         <div class="input-wrapper">
           <textarea
@@ -180,7 +160,10 @@ export function ChatPanel() {
           </button>
         </div>
         <div class="input-footer">
-          <span class="input-hint">Enter 发送 • Shift+Enter 换行 • Ctrl+/ 命令</span>
+          <span class="input-hint">
+            Enter 发送 • Shift+Enter 换行
+            {store.sidecar()?.connected ? " • 侧车已连接" : " • 离线模式"}
+          </span>
         </div>
       </div>
     </div>
