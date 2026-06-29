@@ -1,0 +1,254 @@
+/* ==================== */
+/* 欢迎页面样式 */
+/* ==================== */
+
+.welcome-panel {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--color-bg-base);
+}
+
+/* Hero 区域 */
+.welcome-hero {
+  padding: 80px 40px;
+  text-align: center;
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg-base) 100%);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.welcome-logo {
+  font-size: 80px;
+  margin-bottom: 24px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.welcome-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 16px 0;
+}
+
+.welcome-subtitle {
+  font-size: 18px;
+  color: var(--color-text-secondary);
+  max-width: 600px;
+  margin: 0 auto 32px;
+  line-height: 1.6;
+}
+
+.get-started-btn {
+  padding: 14px 32px;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px var(--color-primary-light);
+}
+
+.get-started-btn:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px var(--color-primary-light);
+}
+
+/* 特性展示 */
+.welcome-features {
+  padding: 60px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.welcome-features h2 {
+  text-align: center;
+  font-size: 28px;
+  margin: 0 0 40px 0;
+  color: var(--color-text-primary);
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.feature-card {
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--color-shadow);
+  border-color: var(--color-primary);
+}
+
+.feature-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.feature-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 12px 0;
+}
+
+.feature-card p {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* 快捷键 */
+.welcome-shortcuts {
+  padding: 60px 40px;
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--color-bg-surface);
+}
+
+.welcome-shortcuts h2 {
+  text-align: center;
+  font-size: 28px;
+  margin: 0 0 40px 0;
+  color: var(--color-text-primary);
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-base);
+}
+
+.shortcut-key {
+  padding: 6px 12px;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.shortcut-action {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+/* 快速开始 */
+.welcome-quickstart {
+  padding: 60px 40px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.welcome-quickstart h2 {
+  text-align: center;
+  font-size: 28px;
+  margin: 0 0 40px 0;
+  color: var(--color-text-primary);
+}
+
+.quickstart-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.step {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg-surface);
+  transition: all 0.3s;
+}
+
+.step:hover {
+  box-shadow: 0 4px 12px var(--color-shadow);
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.step-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 8px 0;
+}
+
+.step-content p {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* 底部 */
+.welcome-footer {
+  padding: 40px;
+  text-align: center;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+}
+
+.welcome-footer p {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px 0;
+}
+
+.welcome-footer kbd {
+  padding: 4px 8px;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.welcome-version {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}

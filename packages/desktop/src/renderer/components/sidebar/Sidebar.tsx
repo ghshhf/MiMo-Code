@@ -41,9 +41,19 @@ export function Sidebar(props: SidebarProps) {
 
         <button
           class="nav-item"
+          classList={{ active: props.activePanel === "project" }}
+          onClick={() => props.onPanelChange("project")}
+          title="项目 (Ctrl+3)"
+        >
+          <span class="nav-icon">📁</span>
+          <span class="nav-label">项目</span>
+        </button>
+
+        <button
+          class="nav-item"
           classList={{ active: props.activePanel === "memory" }}
           onClick={() => props.onPanelChange("memory")}
-          title="记忆 (Ctrl+3)"
+          title="记忆 (Ctrl+4)"
         >
           <span class="nav-icon">📝</span>
           <span class="nav-label">记忆</span>
@@ -53,7 +63,7 @@ export function Sidebar(props: SidebarProps) {
           class="nav-item"
           classList={{ active: props.activePanel === "settings" }}
           onClick={() => props.onPanelChange("settings")}
-          title="设置 (Ctrl+4)"
+          title="设置 (Ctrl+5)"
         >
           <span class="nav-icon">⚙️</span>
           <span class="nav-label">设置</span>

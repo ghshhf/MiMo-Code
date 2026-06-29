@@ -7,13 +7,15 @@ import { ChatPanel } from "../chat/ChatPanel"
 import { AgentPanel } from "../agent/AgentPanel"
 import { MemoryPanel } from "../memory/MemoryPanel"
 import { SettingsPanel } from "../settings/SettingsPanel"
+import { ProjectPanel } from "../project/ProjectPanel"
 
 import "./AppLayout-styles.css"
 import "../memory/memory-styles.css"
 import "../agent/agent-styles.css"
 import "../settings/settings-styles.css"
+import "../project/project-styles.css"
 
-export type PanelType = "chat" | "agent" | "memory" | "settings"
+export type PanelType = "chat" | "agent" | "memory" | "settings" | "project"
 
 export function AppLayout() {
   const [activePanel, setActivePanel] = createSignal<PanelType>("chat")
@@ -37,9 +39,13 @@ export function AppLayout() {
           break
         case "3":
           e.preventDefault()
-          setActivePanel("memory")
+          setActivePanel("project")
           break
         case "4":
+          e.preventDefault()
+          setActivePanel("memory")
+          break
+        case "5":
           e.preventDefault()
           setActivePanel("settings")
           break
@@ -70,6 +76,10 @@ export function AppLayout() {
         
         <Show when={activePanel() === "agent"}>
           <AgentPanel />
+        </Show>
+        
+        <Show when={activePanel() === "project"}>
+          <ProjectPanel />
         </Show>
         
         <Show when={activePanel() === "memory"}>
