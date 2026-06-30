@@ -7,6 +7,10 @@ import { parsePath, parseCcPath, parseCcFrontmatterType, type MemoryLocator } fr
 
 const log = Log.create({ service: "memory.reconcile" })
 
+function normalizeUnicode(s: string): string {
+  return s.normalize("NFC")
+}
+
 export async function walkMemoryDir(root: string): Promise<string[]> {
   const out: string[] = []
   async function recurse(dir: string) {
@@ -67,7 +71,7 @@ export async function indexFromDisk(
     db
       .insert(MemoryFtsTable)
       .values({
-        path: absPath,
+        path: normalizeUnicode(absPath),
         scope: loc.scope,
         scope_id: loc.scope_id,
         type: finalType,
@@ -97,8 +101,11 @@ export async function reconcileMemory(
   // Collect disk paths from BOTH roots before pruning. If we pruned per-root,
   // enabling CC indexing on a fresh run would prune all mimo rows (and vice
   // versa) because each walk's set is missing the other root's paths.
-  const mimoFiles = new Set(await walkMemoryDir(roots.mimo))
-  const ccFiles = roots.cc ? new Set(await walkCcRoot(roots.cc)) : new Set<string>()
+  // Normalize all paths to NFC to prevent NFC/NFD mismatches on macOS/Windows.
+  const mimoFiles = new Set((await walkMemoryDir(roots.mimo)).map(normalizeUnicode))
+  const ccFiles = roots.cc
+    ? new Set((await walkCcRoot(roots.cc)).map(normalizeUnicode))
+    : new Set<string>()
   const diskPaths = new Set<string>([...mimoFiles, ...ccFiles])
 
   const indexed = new Map<string, string>(
@@ -107,7 +114,7 @@ export async function reconcileMemory(
         .select({ path: MemoryFtsTable.path, fingerprint: MemoryFtsTable.fingerprint })
         .from(MemoryFtsTable)
         .all(),
-    ).map((r) => [r.path, r.fingerprint]),
+    ).map((r) => [normalizeUnicode(r.path), r.fingerprint]),
   )
 
   // Direction B: prune dead FTS rows (any path not in either walk).

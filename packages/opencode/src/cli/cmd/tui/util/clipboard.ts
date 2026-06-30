@@ -88,6 +88,42 @@ export async function read(): Promise<Content | undefined> {
         return { data: imageBuffer.toString("base64"), mime: "image/png" }
       }
     }
+
+    // Windows/PowerShell text clipboard read as fallback.
+    // clipboardy's native bindings can fail on some Windows configurations (e.g.
+    // missing VC++ redistributable). PowerShell's Get-Clipboard is more reliable.
+    // Explicitly set UTF-8 output encoding since PowerShell defaults to UTF-16.
+    // Use [Console]::Out.WriteLine() to force output through the configured
+    // encoding (bypasses PowerShell's Unicode pipeline which can produce UTF-16).
+    const psResult = await Process.run(
+      [
+        "powershell.exe",
+        "-NonInteractive",
+        "-NoProfile",
+        "-Command",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $t = Get-Clipboard; if ($t) { [Console]::Out.WriteLine($t) }",
+      ],
+      { nothrow: true },
+    )
+    if (psResult.exitCode === 0 && psResult.stdout.length > 0) {
+      // Detect and decode encoding properly: PowerShell may emit UTF-16LE with BOM
+      // even after setting Console::OutputEncoding, so check the buffer bytes.
+      let decoded: string
+      const b0 = psResult.stdout[0]
+      const b1 = psResult.stdout[1]
+      if (b0 === 0xff && b1 === 0xfe) {
+        // UTF-16LE BOM
+        decoded = Buffer.from(psResult.stdout.buffer, psResult.stdout.byteOffset, psResult.stdout.byteLength)
+          .toString("utf16le")
+          .replace(/^\uFEFF/, "")
+      } else {
+        decoded = psResult.stdout.toString("utf8").replace(/^\uFEFF/, "")
+      }
+      const cleanText = decoded.replace(/\r?\n$/, "").trim()
+      if (cleanText) {
+        return { data: cleanText, mime: "text/plain" }
+      }
+    }
   }
 
   if (os === "linux") {

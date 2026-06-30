@@ -72,6 +72,13 @@ import { isPlainTerminal } from "./util/terminal"
 import type { EventSource } from "./context/sdk"
 import { DialogVariant } from "./component/dialog-variant"
 
+// Double-click guard: tracks the last mouse-down timestamp to suppress
+// rapid left-button sequences (double/triple clicks) that Windows terminals
+// can emit as separate mouse events, causing unintended focus transitions
+// or passthrough to child renderables.
+let lastMouseDownTime = 0
+const DOUBLE_CLICK_THRESHOLD_MS = 500
+
 function rendererConfig(_config: TuiConfig.Info, plainTerminal: boolean): CliRendererConfig {
   const mouseEnabled = !plainTerminal && !Flag.MIMOCODE_DISABLE_MOUSE && (_config.mouse ?? true)
 
@@ -1096,6 +1103,19 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       height={dimensions().height}
       backgroundColor={plainTerminal ? undefined : theme.background}
       onMouseDown={(evt) => {
+        // Double-click guard on Windows: suppress rapid left-button mouse
+        // down sequences that Windows Terminal can emit as separate mouse
+        // events. Without this guard, rapid clicks can cause focus loss or
+        // unintended passthrough to child renderables.
+        const now = performance.now()
+        if (evt.button === MouseButton.LEFT && now - lastMouseDownTime < DOUBLE_CLICK_THRESHOLD_MS) {
+          evt.preventDefault()
+          evt.stopPropagation()
+          lastMouseDownTime = now
+          return
+        }
+        lastMouseDownTime = now
+
         if (evt.button !== MouseButton.RIGHT) return
 
         // When copy-on-mousedown is enabled, prefer copying an active selection;

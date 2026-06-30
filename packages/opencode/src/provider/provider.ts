@@ -1116,14 +1116,14 @@ const layer: Layer.Layer<
         function mergeProvider(providerID: ProviderID, provider: Partial<Info>) {
           const existing = providers[providerID]
           if (existing) {
-            // @ts-expect-error
-            providers[providerID] = mergeDeep(existing, provider)
+            // @ts-expect-error - mergeDeep returns a deeply merged type (not expressible via TS)
+            providers[providerID] = mergeDeep(existing, provider) as typeof providers[string]
             return
           }
           const match = database[providerID]
           if (!match) return
-          // @ts-expect-error
-          providers[providerID] = mergeDeep(match, provider)
+          // @ts-expect-error - mergeDeep returns a deeply merged type (not expressible via TS)
+          providers[providerID] = mergeDeep(match, provider) as typeof providers[string]
         }
 
         // load plugins first so config() hook runs before reading cfg.provider

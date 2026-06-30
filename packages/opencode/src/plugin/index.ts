@@ -244,8 +244,8 @@ export const layer = Layer.effect(
           get serverUrl(): URL {
             return Server.url ?? new URL("http://localhost:4096")
           },
-          // @ts-expect-error
-          $: typeof Bun === "undefined" ? undefined : Bun.$,
+          // @ts-expect-error - Bun.$ is a runtime shell helper not in TS types
+          $: typeof Bun === "undefined" ? undefined : (Bun as Record<string, unknown>).$,
         }
 
         for (const plugin of INTERNAL_PLUGINS) {

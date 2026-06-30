@@ -33,13 +33,27 @@ export const Event = {
 }
 
 const watcher = lazy((): typeof import("@parcel/watcher") | undefined => {
+  const bindingName = `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${OPENCODE_LIBC || "glibc"}` : ""}`
   try {
-    const binding = require(
-      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${OPENCODE_LIBC || "glibc"}` : ""}`,
-    )
+    const binding = require(bindingName)
     return createWrapper(binding) as typeof import("@parcel/watcher")
-  } catch (error) {
-    log.error("failed to load watcher binding", { error })
+  } catch (error: any) {
+    // On Windows, native module loading can fail with LoadLibrary errors when
+    // the Visual C++ Redistributable is not installed or the native binary is
+    // incompatible. Log a descriptive message to aid diagnosis.
+    const isWinLoadLibrary =
+      process.platform === "win32" &&
+      error &&
+      typeof error.message === "string" &&
+      (error.message.includes("LoadLibrary") || error.code === "ERR_DLOPEN_FAILED")
+    log.error("failed to load watcher binding", {
+      binding: bindingName,
+      error: error?.message ?? String(error),
+      code: error?.code,
+      hint: isWinLoadLibrary
+        ? "Windows native module load failed. Ensure the Visual C++ Redistributable is installed. See: https://aka.ms/vcprerelease"
+        : undefined,
+    })
     return
   }
 })

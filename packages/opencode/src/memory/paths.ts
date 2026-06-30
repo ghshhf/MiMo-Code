@@ -1,6 +1,14 @@
 import path from "path"
 import { createHash } from "crypto"
 
+// Normalize Unicode strings to NFC form to prevent NFC/NFD mismatches
+// on macOS and Windows filesystems (e.g. "caf\u00e9" vs "cafe\u0301").
+// Without this, paths with composed characters won't match their decomposed
+// counterparts when stored in the database or compared during reconciliation.
+function normalizeUnicode(s: string): string {
+  return s.normalize("NFC")
+}
+
 export type Scope = "global" | "projects" | "sessions" | "cc"
 export type MemoryType =
   | "free"
@@ -43,7 +51,11 @@ function detectType(key: string): MemoryType {
 }
 
 export function parsePath(absPath: string): MemoryLocator | null {
-  const m = absPath.match(/\/memory\/(global|projects|sessions)(?:\/([^/]+))?\/(.+)\.md$/)
+  // Normalize backslashes to forward slashes for cross-platform regex matching
+  // Also normalize Unicode to NFC to prevent NFC/NFD mismatches
+  const normalized = absPath.replace(/\\/g, "/")
+  const normalizedUnicode = normalizeUnicode(normalized)
+  const m = normalizedUnicode.match(/\/memory\/(global|projects|sessions)(?:\/([^/]+))?\/(.+)\.md$/)
   if (!m) return null
   const [, scope, idMaybe, keyRaw] = m
   const scope_id = scope === "global" ? "" : (idMaybe ?? "")
@@ -57,7 +69,11 @@ export function parsePath(absPath: string): MemoryLocator | null {
 const CC_PATH_RE = /\/\.claude\/projects\/([^/]+)\/memory\/(.+)\.md$/
 
 export function parseCcPath(absPath: string): MemoryLocator | null {
-  const m = absPath.match(CC_PATH_RE)
+  // Normalize backslashes to forward slashes for cross-platform regex matching
+  // Also normalize Unicode to NFC to prevent NFC/NFD mismatches
+  const normalized = absPath.replace(/\\/g, "/")
+  const normalizedUnicode = normalizeUnicode(normalized)
+  const m = normalizedUnicode.match(CC_PATH_RE)
   if (!m) return null
   const [, slug, keyRaw] = m
   return {
@@ -105,12 +121,12 @@ function assertSafeComponent(value: string) {
 export function buildPath(input: { root: string; scope: Scope; scope_id?: string; key: string }): string {
   if (input.scope_id !== undefined) assertSafeComponent(input.scope_id)
   assertSafeComponent(input.key)
-  const parts = [input.root, input.scope]
+  const parts = [normalizeUnicode(input.root), input.scope]
   if (input.scope !== "global") parts.push(input.scope_id ?? "")
   parts.push(`${input.key}.md`)
   return path.join(...parts)
 }
 
 export function resolveProjectId(absRepoPath: string): string {
-  return createHash("sha256").update(absRepoPath).digest("hex").slice(0, 12)
+  return createHash("sha256").update(normalizeUnicode(absRepoPath)).digest("hex").slice(0, 12)
 }

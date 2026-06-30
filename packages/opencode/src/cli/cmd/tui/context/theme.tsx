@@ -490,8 +490,8 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     return {
       theme: new Proxy(values(), {
         get(_target, prop) {
-          // @ts-expect-error
-          return values()[prop]
+          // @ts-expect-error - Proxy get handler with dynamic property access
+          return (values() as Record<string, unknown>)[prop]
         },
       }),
       get selected() {

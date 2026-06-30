@@ -22,6 +22,12 @@ export const ProviderID = providerIdSchema.pipe(
     openrouter: schema.make("openrouter"),
     mistral: schema.make("mistral"),
     gitlab: schema.make("gitlab"),
+    deepseek: schema.make("deepseek"),
+    moonshot: schema.make("moonshot"),
+    zhipu: schema.make("zhipu"),
+    qwen: schema.make("qwen"),
+    baidu: schema.make("baidu"),
+    siliconflow: schema.make("siliconflow"),
   })),
 )
 

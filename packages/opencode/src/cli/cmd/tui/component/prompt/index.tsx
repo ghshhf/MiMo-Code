@@ -89,6 +89,19 @@ function fadeColor(color: RGBA, alpha: number) {
 
 let stashed: { prompt: PromptInfo; cursor: number } | undefined
 
+// IME composition guard: tracks rapid content changes during CJK/Korean IME
+// input to prevent submit() from reading stale input.plainText.
+let lastChangeTime = 0
+const IME_SETTLE_MS = 200
+let pendingSubmitTimer: ReturnType<typeof setTimeout> | undefined
+
+// IME composition state: set to true during rapid content changes (indicating
+// an active CJK/Korean IME composition) and cleared after a settling period.
+// Used to prevent submit() from firing while the IME is still composing and
+// to ensure the final composed character is flushed to plainText.
+let isComposing = false
+let compositionSettleTimer: ReturnType<typeof setTimeout> | undefined
+
 // Module-level voice state: survives component remounts and route changes
 let activeVoice: {
   handle: Voice.StreamingHandle
@@ -828,6 +841,8 @@ export function Prompt(props: PromptProps) {
   })
 
   onCleanup(() => {
+    clearTimeout(pendingSubmitTimer)
+    clearTimeout(compositionSettleTimer)
     if (store.prompt.input) {
       stashed = { prompt: unwrap(store.prompt), cursor: input.cursorOffset }
     }
@@ -1000,6 +1015,27 @@ export function Prompt(props: PromptProps) {
   // interleave with the post-accept re-submit and drop the user's message.
   let agreementPending = false
   async function submit() {
+    clearTimeout(pendingSubmitTimer)
+    // If an IME composition is still in progress, defer submission. The
+    // composition may have been triggered by a different input method than
+    // what the onContentChange handler detected, so check again here.
+    if (isComposing) {
+      return new Promise<boolean>((resolve) => {
+        const check = () => {
+          if (isComposing) {
+            setTimeout(check, IME_SETTLE_MS)
+          } else {
+            // Sync the latest content before submitting
+            if (input && !input.isDestroyed && input.plainText !== store.prompt.input) {
+              setStore("prompt", "input", input.plainText)
+              syncExtmarksWithPromptParts()
+            }
+            resolve(submit())
+          }
+        }
+        setTimeout(check, IME_SETTLE_MS)
+      })
+    }
     if (agreementPending) return false
     setGhost("")
     // IME: double-defer may fire before onContentChange flushes the last
@@ -1478,6 +1514,17 @@ export function Prompt(props: PromptProps) {
               minHeight={1}
               maxHeight={6}
               onContentChange={() => {
+                lastChangeTime = performance.now()
+                // Detect IME composition: if content changes rapidly, it's likely
+                // an active IME composition session (CJK/Korean). Mark composing
+                // state and defer submit until changes settle.
+                if (!isComposing) {
+                  isComposing = true
+                }
+                clearTimeout(compositionSettleTimer)
+                compositionSettleTimer = setTimeout(() => {
+                  isComposing = false
+                }, IME_SETTLE_MS)
                 const value = input.plainText
                 if (value !== "" && ghost()) setGhost("")
                 setStore("prompt", "input", value)
@@ -1579,9 +1626,42 @@ export function Prompt(props: PromptProps) {
                 }
               }}
               onSubmit={() => {
-                // IME: double-defer so the last composed character (e.g. Korean
-                // hangul) is flushed to plainText before we read it for submission.
-                setTimeout(() => setTimeout(() => submit(), 0), 0)
+                // IME: if a composition is actively in progress, always defer
+                // submit until it settles. This prevents the Enter key from
+                // submitting while the IME is still composing (e.g. the user
+                // pressed Enter to confirm the current composition candidate,
+                // not to send the message).
+                if (isComposing) {
+                  clearTimeout(pendingSubmitTimer)
+                  pendingSubmitTimer = setTimeout(() => {
+                    // Sync content before submitting — the composition just
+                    // settled, so plainText should now have the final text.
+                    if (input && !input.isDestroyed && input.plainText !== store.prompt.input) {
+                      setStore("prompt", "input", input.plainText)
+                      syncExtmarksWithPromptParts()
+                    }
+                    void submit()
+                  }, IME_SETTLE_MS + 50)
+                  return
+                }
+                // IME: guard against submitting while a composition is in progress
+                // (CJK/Korean IME). Wait for content to settle before submitting so
+                // the last composed character is flushed to plainText.
+                const elapsed = performance.now() - lastChangeTime
+                if (elapsed < IME_SETTLE_MS) {
+                  clearTimeout(pendingSubmitTimer)
+                  pendingSubmitTimer = setTimeout(() => {
+                    // Sync content before submitting in case the composition just
+                    // settled (e.g. Korean hangul final syllable).
+                    if (input && !input.isDestroyed && input.plainText !== store.prompt.input) {
+                      setStore("prompt", "input", input.plainText)
+                      syncExtmarksWithPromptParts()
+                    }
+                    void submit()
+                  }, IME_SETTLE_MS - elapsed + 50)
+                  return
+                }
+                void submit()
               }}
               onPaste={async (event: PasteEvent) => {
                 if (props.disabled) {

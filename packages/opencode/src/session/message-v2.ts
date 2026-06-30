@@ -864,8 +864,8 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
     convertToModelMessages(
       result.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
       {
-        //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
-        tools,
+        // @ts-expect-error - convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput
+        tools: tools as never,
       },
     ),
   )
