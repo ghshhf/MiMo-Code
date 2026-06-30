@@ -330,10 +330,17 @@ function setupAutoUpdater() {
   autoUpdater.allowDowngrade = true
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
+  
+  // 设置 GitHub 发布源（开发模式下需要显式设置）
+  autoUpdater.setFeedURL({
+    provider: "github",
+    owner: "ghshhf",
+    repo: "MiMo-Code",
+  })
+  
   logger.log("auto updater configured", {
     channel: autoUpdater.channel,
     allowPrerelease: autoUpdater.allowPrerelease,
-    allowDowngrade: autoUpdater.allowDowngrade,
     currentVersion: app.getVersion(),
   })
 }

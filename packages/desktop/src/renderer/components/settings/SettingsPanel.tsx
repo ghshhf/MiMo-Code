@@ -6,6 +6,77 @@ import { useAppStore } from "../../stores/AppStore"
 export function SettingsPanel() {
   const store = useAppStore()
   const [showResetConfirm, setShowResetConfirm] = createSignal(false)
+
+  // 更新状态
+  const [updateStatus, setUpdateStatus] = createSignal<{
+    checking: boolean
+    available: boolean
+    version?: string
+    downloading: boolean
+    ready: boolean
+    error?: string
+  }>({ checking: false, available: false, downloading: false, ready: false })
+
+  const checkForUpdates = async () => {
+    setUpdateStatus({ checking: true, available: false, downloading: false, ready: false })
+    try {
+      if (typeof window.api?.checkUpdate === "function") {
+        const result = await window.api.checkUpdate()
+        if (result?.updateAvailable) {
+          setUpdateStatus({
+            checking: false,
+            available: true,
+            version: result.version,
+            downloading: true,
+            ready: false,
+          })
+          // 自动开始下载
+          await window.api.runUpdater?.(false)
+          setUpdateStatus({
+            checking: false,
+            available: true,
+            version: result.version,
+            downloading: false,
+            ready: true,
+          })
+        } else {
+          setUpdateStatus({
+            checking: false,
+            available: false,
+            ready: false,
+            downloading: false,
+            error: result?.failed ? "检查更新失败" : "已是最新版本",
+          })
+        }
+      } else {
+        // 开发模式下模拟
+        await new Promise(r => setTimeout(r, 1000))
+        setUpdateStatus({
+          checking: false,
+          available: true,
+          version: "1.0.0",
+          downloading: false,
+          ready: true,
+        })
+      }
+    } catch (err: any) {
+      setUpdateStatus({
+        checking: false,
+        available: false,
+        downloading: false,
+        ready: false,
+        error: err?.message || "检查更新失败",
+      })
+    }
+  }
+
+  const installUpdate = async () => {
+    try {
+      if (typeof window.api?.installUpdate === "function") {
+        await window.api.installUpdate()
+      }
+    } catch {}
+  }
   const s = () => store.settings
 
   return (
@@ -99,6 +170,46 @@ export function SettingsPanel() {
             <label>自动换行</label>
             <input type="checkbox" checked={s().wordWrap}
               onChange={(e) => store.updateSettings({ wordWrap: e.currentTarget.checked })} />
+          </div>
+        </section>
+
+        {/* 更新管理 */}
+        <section class="settings-section">
+          <h3>📦 更新管理</h3>
+          <div class="update-section">
+            <Show when={!updateStatus().checking && !updateStatus().available && !updateStatus().error}>
+              <div class="update-info">
+                <p>当前版本: 0.1.4 (desktop-redesign)</p>
+                <button class="action-btn" onClick={checkForUpdates}>
+                  🔄 检查更新
+                </button>
+              </div>
+            </Show>
+
+            <Show when={updateStatus().checking}>
+              <div class="update-info checking">
+                <div class="spinner-small" />
+                <p>正在检查更新...</p>
+              </div>
+            </Show>
+
+            <Show when={updateStatus().error && !updateStatus().checking}>
+              <div class="update-info result">
+                <p class="update-error">{updateStatus().error}</p>
+                <button class="action-btn" onClick={checkForUpdates}>
+                  🔄 重新检查
+                </button>
+              </div>
+            </Show>
+
+            <Show when={updateStatus().ready}>
+              <div class="update-info ready">
+                <p>✅ 更新已就绪: v{updateStatus().version}</p>
+                <button class="btn-primary" onClick={installUpdate}>
+                  🚀 立即重启安装
+                </button>
+              </div>
+            </Show>
           </div>
         </section>
 

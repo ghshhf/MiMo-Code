@@ -86,6 +86,13 @@ function getConfig() {
         ...base,
         appId: "ai.opencode.desktop.dev",
         productName: "OpenCode Dev",
+        publish: {
+          provider: "github",
+          owner: "ghshhf",
+          repo: "MiMo-Code",
+          channel: "latest",
+          releaseType: "release",
+        },
         rpm: { packageName: "opencode-dev" },
       }
     }

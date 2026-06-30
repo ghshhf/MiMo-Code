@@ -11,6 +11,8 @@
   },
   "scripts": {
     "typecheck": "tsgo -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "predev": "bun ./scripts/predev.ts",
     "dev": "electron-vite dev",
     "prebuild": "bun ./scripts/prebuild.ts",
@@ -42,6 +44,7 @@
     "@solid-primitives/storage": "catalog:",
     "@solidjs/meta": "catalog:",
     "@solidjs/router": "0.15.4",
+    "@solidjs/testing-library": "0.8.10",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
@@ -49,10 +52,12 @@
     "electron": "42.5.1",
     "electron-builder": "^26",
     "electron-vite": "^5",
+    "jsdom": "29.1.1",
     "solid-js": "catalog:",
     "sury": "11.0.0-alpha.4",
     "typescript": "~5.6.2",
     "vite": "catalog:",
+    "vitest": "4.1.9",
     "zod-openapi": "5.4.6"
   },
   "optionalDependencies": {
