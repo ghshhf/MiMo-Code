@@ -1,0 +1,21 @@
+{
+  "name": "@mimo-ai/web-wrapper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "hono": "catalog:",
+    "zod": "catalog:",
+    "@playwright/test": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@tsconfig/bun": "catalog:",
+    "typescript": "catalog:"
+  }
+}

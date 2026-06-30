@@ -1,0 +1,76 @@
+sequenceDiagram
+    participant Agent as MiMo-Code Agent
+    participant Provider as @ai-sdk/openai-compatible
+    participant Server as Hono Server (server.ts)
+    participant Converter as MessageConverter
+    participant Adapter as DeepSeekWebAdapter
+    participant Browser as BrowserManager
+    participant Page as Playwright Page
+    participant Web as DeepSeek Web Page
+
+    Note over Agent,Web: === 非流式请求流程 ===
+
+    Agent->>Provider: 1. 调用 languageModel
+    Provider->>Server: 2. POST /v1/chat/completions { messages, stream: false }
+    Server->>Server: 3. 解析/校验请求
+    Server->>Converter: 4. convertMessages(messages)
+    Converter->>Converter: 5. 合并 tool_call/tool_result 为自然语言
+    Converter-->>Server: 6. 纯文本消息列表
+    Server->>Adapter: 7. sendMessage(page, messages, { stream: false })
+    Adapter->>Browser: 8. getSession(sessionId)
+    Browser->>Page: 9. 获取/创建页面
+    Page-->>Adapter: 10. 返回 Page 实例
+    Adapter->>Page: 11. 清空输入框
+    Adapter->>Page: 12. 输入最新消息文本
+    Adapter->>Page: 13. 点击发送按钮
+    Page->>Web: 14. 提交消息
+    Web-->>Page: 15. 开始生成回复
+    Adapter->>Page: 16. 等待回复完成 (poll DOM)
+    Page-->>Adapter: 17. 完整回复文本
+    Adapter-->>Server: 18. 返回完整文本 (含 reasoning_content)
+    Server-->>Provider: 19. 200 OK { choices: [{ message: { content, reasoning_content } }] }
+    Provider-->>Agent: 20. 返回 LanguageModelV3 响应
+
+    Note over Agent,Web: === 流式 SSE 请求流程 ===
+
+    Agent->>Provider: 21. 调用 languageModel (stream: true)
+    Provider->>Server: 22. POST /v1/chat/completions { messages, stream: true }
+    Server->>Converter: 23. convertMessages(messages)
+    Converter-->>Server: 24. 纯文本消息列表
+    Server->>Adapter: 25. sendMessage(page, messages, { stream: true })
+    Adapter->>Browser: 26. getSession(sessionId)
+    Browser->>Page: 27. 获取/创建页面
+    Page-->>Adapter: 28. 返回 Page 实例
+    Adapter->>Page: 29. 清空输入框
+    Adapter->>Page: 30. 输入最新消息
+    Adapter->>Page: 31. 点击发送按钮
+    Page->>Web: 32. 提交消息
+    Server->>Server: 33. 设置 SSE headers
+    Server-->>Provider: 34. SSE 连接建立
+
+    loop 思考内容增量提取
+        Adapter->>Page: 35. MutationObserver 监听 DOM
+        Page-->>Adapter: 36. 增量 thinking_content
+        Adapter-->>Server: 37. yield delta
+        Server-->>Provider: 38. SSE: data: {"choices":[{"delta":{"reasoning_content":"..."}}]}
+    end
+
+    loop 回复内容增量提取
+        Adapter->>Page: 39. 监听回复容器变化
+        Page-->>Adapter: 40. 增量 content
+        Adapter-->>Server: 41. yield delta
+        Server-->>Provider: 42. SSE: data: {"choices":[{"delta":{"content":"..."}}]}
+    end
+
+    Web-->>Page: 43. 回复完成
+    Adapter-->>Server: 44. 迭代结束
+    Server-->>Provider: 45. SSE: data: [DONE]
+    Provider-->>Agent: 46. 流式合并完成
+
+    Note over Agent,Web: === 消息格式转换流程 ===
+
+    Server->>Converter: convertMessages(rawMessages)
+    Note over Converter: 输入: [{role:"user", content:"你好"}, {role:"assistant", content:"好的", tool_calls:[...]}, {role:"tool", content:"结果"}]
+    Converter->>Converter: 遍历 + 合并 tool_call/tool_result 对
+    Note over Converter: 输出: [{role:"user", content:"你好"}, {role:"assistant", content:"好的"}, {role:"user", content:"[工具结果] 结果"}]
+    Converter-->>Server: 转换后的纯文本消息列表

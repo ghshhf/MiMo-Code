@@ -1,0 +1,158 @@
+classDiagram
+    %% ============ 类型定义 ============
+    class ChatRequest {
+        +string model
+        +ChatMessage[] messages
+        +boolean? stream
+        +number? temperature
+        +number? max_tokens
+        +string? session_id
+    }
+
+    class ChatMessage {
+        +string role
+        +string~string[]? content
+        +ToolCall[]? tool_calls
+        +string? tool_call_id
+    }
+
+    class ToolCall {
+        +string id
+        +string type
+        +FunctionCall function
+    }
+
+    class FunctionCall {
+        +string name
+        +string arguments
+    }
+
+    class ChatResponse {
+        +string id
+        +string object
+        +number created
+        +string model
+        +Choice[] choices
+        +Usage? usage
+    }
+
+    class Choice {
+        +number index
+        +ResponseMessage message
+        +string finish_reason
+    }
+
+    class ResponseMessage {
+        +string role
+        +string content
+        +string? reasoning_content
+    }
+
+    class Usage {
+        +number prompt_tokens
+        +number completion_tokens
+    }
+
+    class SSEDelta {
+        +string id
+        +string object
+        +number created
+        +string model
+        +DeltaChoice[] choices
+    }
+
+    class DeltaChoice {
+        +number index
+        +Delta delta
+        +string? finish_reason
+    }
+
+    class Delta {
+        +string? content
+        +string? reasoning_content
+    }
+
+    %% ============ 服务类 ============
+    class WebAdapter {
+        <<interface>>
+        +readonly id: string
+        +readonly name: string
+        +readonly url: string
+        +sendMessage(page, messages, options) AsyncIterable~string~
+        +getSelectors() PageSelectors
+    }
+
+    class DeepSeekWebAdapter {
+        +readonly id: string
+        +readonly name: string
+        +readonly url: string
+        +sendMessage(page, messages, options) AsyncIterable~string~
+        +getSelectors() PageSelectors
+        -waitForThinkingContent(page) AsyncIterable~string~
+        -waitForResponseContent(page) AsyncIterable~string~
+    }
+
+    class PageSelectors {
+        +string textarea
+        +string submitButton
+        +string responseArea
+        +string thinkingArea
+        +string stopButton
+    }
+
+    class BrowserManager {
+        +readonly adapter: WebAdapter
+        +init() Promise~void~
+        +getSession(sessionId) Promise~Page~
+        +closeSession(sessionId) Promise~void~
+        +closeAll() Promise~void~
+        +getHealth() BrowserHealth
+    }
+
+    class BrowserHealth {
+        +boolean browserConnected
+        +number activeSessions
+        +string[] adapterNames
+    }
+
+    class MessageConverter {
+        +convertMessages(messages) ChatMessage[]
+        +mergeToolCalls(messages) string
+        +formatToolResult(toolCall, toolResult) string
+    }
+
+    class AppConfig {
+        +number port
+        +string browserPath
+        +boolean headless
+        +number requestTimeout
+        +string sessionDir
+        +string adapterName
+        +string[] allowedOrigins
+        +boolean debug
+        +parse(raw) AppConfig
+    }
+
+    class WebWrapperApp {
+        +config: AppConfig
+        +browserManager: BrowserManager
+        +start() Promise~void~
+        +stop() Promise~void~
+    }
+
+    %% ============ 关系 ============
+    DeepSeekWebAdapter ..|> WebAdapter : implements
+    WebWrapperApp *-- AppConfig : has
+    WebWrapperApp *-- BrowserManager : has
+    WebWrapperApp *-- MessageConverter : has
+    BrowserManager --> WebAdapter : uses
+    BrowserManager --> PageSelectors : uses
+    DeepSeekWebAdapter --> PageSelectors : defines
+
+    ChatRequest *-- ChatMessage : messages[]
+    ChatMessage *-- ToolCall : tool_calls[]
+    ToolCall *-- FunctionCall : function
+    ChatResponse *-- Choice : choices[]
+    Choice *-- ResponseMessage : message
+    SSEDelta *-- DeltaChoice : choices[]
+    DeltaChoice *-- Delta : delta

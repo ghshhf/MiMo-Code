@@ -626,6 +626,20 @@
         "typescript": "catalog:",
       },
     },
+    "packages/web-wrapper": {
+      "name": "@mimo-ai/web-wrapper",
+      "version": "0.1.0",
+      "dependencies": {
+        "@playwright/test": "catalog:",
+        "hono": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
   },
   "trustedDependencies": [
     "esbuild",
@@ -1444,6 +1458,8 @@
     "@mimo-ai/ui": ["@mimo-ai/ui@workspace:packages/ui"],
 
     "@mimo-ai/web": ["@mimo-ai/web@workspace:packages/web"],
+
+    "@mimo-ai/web-wrapper": ["@mimo-ai/web-wrapper@workspace:packages/web-wrapper"],
 
     "@mixmark-io/domino": ["@mixmark-io/domino@2.2.0", "", {}, "sha512-Y28PR25bHXUg88kCV7nivXrP2Nj2RueZ3/l/jdx6J9f8J4nsEGcgX0Qe6lt7Pa+J79+kPiJU3LguR6O/6zrLOw=="],
 
