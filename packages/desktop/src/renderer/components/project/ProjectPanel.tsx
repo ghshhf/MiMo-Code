@@ -1,185 +1,168 @@
-import { createSignal, For, Show } from "solid-js"
+// ProjectPanel.tsx - 接入 API 的项目面板
+
+import { createSignal, For, Show, onMount } from "solid-js"
+import { fetchProjectFiles } from "../../stores/api"
 import "./project-styles.css"
 
-// 文件树节点
 interface FileNode {
   name: string
   path: string
   type: "file" | "directory"
-  children?: FileNode[]
-  isExpanded?: boolean
   size?: number
-  modifiedAt?: Date
+  modifiedAt?: string
 }
 
-// 模拟项目文件树
-const mockProjectTree: FileNode[] = [
-  {
-    name: "src",
-    path: "/src",
-    type: "directory",
-    isExpanded: true,
-    children: [
-      {
-        name: "components",
-        path: "/src/components",
-        type: "directory",
-        children: [
-          { name: "App.tsx", path: "/src/components/App.tsx", type: "file", size: 2048, modifiedAt: new Date() },
-          { name: "Header.tsx", path: "/src/components/Header.tsx", type: "file", size: 1024, modifiedAt: new Date() }
-        ]
-      },
-      { name: "index.tsx", path: "/src/index.tsx", type: "file", size: 512, modifiedAt: new Date() },
-      { name: "styles.css", path: "/src/styles.css", type: "file", size: 3072, modifiedAt: new Date() }
-    ]
-  },
-  {
-    name: "packages",
-    path: "/packages",
-    type: "directory",
-    children: [
-      { name: "desktop", path: "/packages/desktop", type: "directory", children: [] },
-      { name: "opencode", path: "/packages/opencode", type: "directory", children: [] }
-    ]
-  },
-  { name: "package.json", path: "/package.json", type: "file", size: 1536, modifiedAt: new Date() },
-  { name: "tsconfig.json", path: "/tsconfig.json", type: "file", size: 768, modifiedAt: new Date() },
-  { name: "README.md", path: "/README.md", type: "file", size: 4096, modifiedAt: new Date() }
-]
+// 文件图标映射
+const extensionIcon: Record<string, string> = {
+  ".ts": "🔷", ".tsx": "⚛️", ".js": "🟨", ".jsx": "⚛️",
+  ".json": "📋", ".md": "📝", ".css": "🎨", ".html": "🌐",
+  ".py": "🐍", ".rs": "🦀", ".go": "🔵", ".java": "☕",
+  ".yaml": "⚙️", ".yml": "⚙️", ".toml": "⚙️", ".env": "🔒",
+  ".gitignore": "🙈", ".svg": "🖼️", ".png": "🖼️", ".jpg": "🖼️",
+}
+
+function getFileIcon(name: string, type: "file" | "directory"): string {
+  if (type === "directory") {
+    if (name === "node_modules") return "📦"
+    if (name === "src") return "📁"
+    if (name === "dist" || name === "out") return "📦"
+    return "📂"
+  }
+  const ext = "." + name.split(".").pop()
+  return extensionIcon[ext] || "📄"
+}
+
+function formatSize(bytes?: number): string {
+  if (!bytes) return "-"
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
 
 export function ProjectPanel() {
-  const [files, setFiles] = createSignal<FileNode[]>(mockProjectTree)
-  const [selectedFile, setSelectedFile] = createSignal<string | null>(null)
+  const [files, setFiles] = createSignal<FileNode[]>([])
+  const [expandedDirs, setExpandedDirs] = createSignal<Set<string>>(new Set(["src"]))
   const [searchQuery, setSearchQuery] = createSignal("")
-  const [showHidden, setShowHidden] = createSignal(false)
+  const [isLoading, setIsLoading] = createSignal(true)
 
-  // 切换目录展开状态
-  const toggleExpand = (path: string) => {
-    const updateNodes = (nodes: FileNode[]): FileNode[] => {
-      return nodes.map(node => {
-        if (node.path === path) {
-          return { ...node, isExpanded: !node.isExpanded }
-        }
-        if (node.children) {
-          return { ...node, children: updateNodes(node.children) }
-        }
-        return node
-      })
-    }
-    setFiles(updateNodes(files()))
-  }
+  onMount(async () => {
+    setIsLoading(true)
+    const data = await fetchProjectFiles(".")
+    setFiles(data)
+    setIsLoading(false)
+  })
 
-  // 选择文件
-  const selectFile = (path: string) => {
-    setSelectedFile(path)
-    // 这里可以触发打开文件的逻辑
-    console.log("打开文件:", path)
-  }
-
-  // 格式化文件大小
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
-
-  // 获取文件图标
-  const getFileIcon = (name: string) => {
-    if (name.endsWith(".tsx") || name.endsWith(".ts")) return "📄"
-    if (name.endsWith(".css")) return "🎨"
-    if (name.endsWith(".json")) return "📋"
-    if (name.endsWith(".md")) return "📝"
-    if (name.endsWith(".png") || name.endsWith(".jpg")) return "🖼️"
-    return "📄"
-  }
-
-  // 递归渲染文件树
-  const renderFileTree = (nodes: FileNode[], depth: number = 0) => {
-    return (
-      <For each={nodes}>
-        {(node) => (
-          <div>
-            <div
-              class={`file-item ${selectedFile() === node.path ? "selected" : ""}`}
-              style={{ paddingLeft: `${depth * 20 + 12}px` }}
-              onClick={() => {
-                if (node.type === "directory") {
-                  toggleExpand(node.path)
-                } else {
-                  selectFile(node.path)
-                }
-              }}
-            >
-              <span class="file-icon">
-                {node.type === "directory"
-                  ? (node.isExpanded ? "📂" : "📁")
-                  : getFileIcon(node.name)
-                }
-              </span>
-              <span class="file-name">{node.name}</span>
-              {node.type === "file" && node.size && (
-                <span class="file-size">{formatSize(node.size)}</span>
-              )}
-            </div>
-            {node.type === "directory" && node.isExpanded && node.children && (
-              <div class="file-children">
-                {renderFileTree(node.children, depth + 1)}
-              </div>
-            )}
-          </div>
-        )}
-      </For>
-    )
+  const toggleDir = (path: string) => {
+    setExpandedDirs(prev => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
   }
 
   return (
     <div class="project-panel">
-      {/* 头部 */}
       <div class="project-header">
-        <h2>📁 项目管理</h2>
-        <div class="project-actions">
-          <button class="btn-icon" title="新建文件">➕</button>
-          <button class="btn-icon" title="新建文件夹">📁</button>
-          <button class="btn-icon" title="刷新">🔄</button>
+        <h2>📂 项目浏览</h2>
+        <div class="project-info">
+          <span>{files.length} 个根目录项</span>
         </div>
       </div>
 
-      {/* 项目信息 */}
-      <div class="project-info">
-        <div class="project-name">MiMo-Code Desktop</div>
-        <div class="project-path">/c/Users/123/mimo-desktop</div>
-      </div>
-
-      {/* 搜索 */}
       <div class="project-search">
-        <input
-          type="text"
-          placeholder="搜索文件..."
-          value={searchQuery()}
-          onInput={(e) => setSearchQuery(e.currentTarget.value)}
-          class="search-input"
-        />
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="搜索文件..." value={searchQuery()}
+          onInput={(e) => setSearchQuery(e.currentTarget.value)} class="search-input" />
       </div>
 
-      {/* 文件树 */}
       <div class="file-tree">
-        {renderFileTree(files())}
-      </div>
+        <Show when={isLoading()}>
+          <div class="empty-state"><div class="spinner" /><p>加载项目文件...</p></div>
+        </Show>
 
-      {/* 底部状态 */}
-      <div class="project-status">
-        <span class="status-text">
-          {files().length} 个项目根目录
-        </span>
-        <label class="show-hidden">
-          <input
-            type="checkbox"
-            checked={showHidden()}
-            onInput={(e) => setShowHidden(e.currentTarget.checked)}
-          />
-          显示隐藏文件
-        </label>
+        <Show when={!isLoading() && files().length === 0}>
+          <div class="empty-state">
+            <div class="empty-icon">📂</div>
+            <p>未打开项目</p>
+            <button class="btn-secondary" onClick={() => fetchProjectFiles(".").then(setFiles)}>
+              刷新文件列表
+            </button>
+          </div>
+        </Show>
+
+        <For each={files()}>
+          {(node) => (
+            <FileTreeNode node={node} depth={0}
+              expandedDirs={expandedDirs()}
+              searchQuery={searchQuery()}
+              onToggle={toggleDir} />
+          )}
+        </For>
       </div>
     </div>
+  )
+}
+
+// 文件树节点组件
+function FileTreeNode(props: {
+  node: FileNode
+  depth: number
+  expandedDirs: Set<string>
+  searchQuery: string
+  onToggle: (path: string) => void
+}) {
+  const { node, depth, expandedDirs, searchQuery, onToggle } = props
+  const isExpanded = expandedDirs.has(node.path)
+  const matchesSearch = !searchQuery || node.name.toLowerCase().includes(searchQuery.toLowerCase())
+
+  // 模拟子节点（组件内扩展）
+  const children = (() => {
+    if (node.type !== "directory" || !isExpanded) return []
+    if (node.name === "src") return [
+      { name: "main", path: "/src/main", type: "directory" as const },
+      { name: "renderer", path: "/src/renderer", type: "directory" as const },
+    ]
+    if (node.path === "/src/main") return [
+      { name: "index.ts", path: "/src/main/index.ts", type: "file" as const, size: 3200, modifiedAt: "2024-06-28" },
+      { name: "windows.ts", path: "/src/main/windows.ts", type: "file" as const, size: 5500, modifiedAt: "2024-06-27" },
+    ]
+    if (node.path === "/src/renderer") return [
+      { name: "index.tsx", path: "/src/renderer/index.tsx", type: "file" as const, size: 2800, modifiedAt: "2024-06-29" },
+      { name: "components", path: "/src/renderer/components", type: "directory" as const },
+      { name: "stores", path: "/src/renderer/stores", type: "directory" as const },
+    ]
+    if (node.path === "/src/renderer/components") return [
+      { name: "layout", path: "/src/renderer/components/layout", type: "directory" as const },
+      { name: "chat", path: "/src/renderer/components/chat", type: "directory" as const },
+      { name: "agent", path: "/src/renderer/components/agent", type: "directory" as const },
+      { name: "memory", path: "/src/renderer/components/memory", type: "directory" as const },
+    ]
+    return []
+  })()
+
+  if (!matchesSearch && children().length === 0) return null
+
+  return (
+    <>
+      <div class="file-node" style={{ "padding-left": `${depth * 16 + 8}px` }}
+        onClick={() => node.type === "directory" && onToggle(node.path)}>
+        <span class="file-expand">
+          {node.type === "directory" ? (isExpanded ? "▼" : "▶") : " "}
+        </span>
+        <span class="file-icon">{getFileIcon(node.name, node.type)}</span>
+        <span class="file-name">{node.name}</span>
+        {node.size ? <span class="file-size">{formatSize(node.size)}</span> : null}
+        {node.modifiedAt ? <span class="file-date">{node.modifiedAt}</span> : null}
+      </div>
+      <For each={children()}>
+        {(child) => (
+          <FileTreeNode node={child} depth={depth + 1}
+            expandedDirs={props.expandedDirs}
+            searchQuery={props.searchQuery}
+            onToggle={props.onToggle} />
+        )}
+      </For>
+    </>
   )
 }

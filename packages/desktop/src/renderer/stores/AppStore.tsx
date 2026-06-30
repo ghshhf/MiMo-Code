@@ -108,15 +108,23 @@ export function AppStoreProvider(props: { children: JSX.Element }) {
   const [settings, setSettings] = createSignal<AppSettings>(DEFAULT_SETTINGS)
 
   const updateSettings = (partial: Partial<AppSettings>) => {
-    setSettings(prev => ({ ...prev, ...partial }))
-    // 持久化到 localStorage
-    try {
-      localStorage.setItem("app-settings", JSON.stringify({ ...settings(), ...partial }))
-    } catch {}
+    setSettings(prev => {
+      const next = { ...prev, ...partial }
+      // 实时应用主题
+      if (partial.theme) {
+        document.documentElement.setAttribute("data-theme", partial.theme === "light" ? "light" : "dark")
+      }
+      // 持久化到 localStorage
+      try {
+        localStorage.setItem("app-settings", JSON.stringify(next))
+      } catch {}
+      return next
+    })
   }
 
   const resetSettings = () => {
     setSettings(DEFAULT_SETTINGS)
+    document.documentElement.setAttribute("data-theme", "dark")
     try {
       localStorage.removeItem("app-settings")
     } catch {}

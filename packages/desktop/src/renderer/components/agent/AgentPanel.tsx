@@ -1,221 +1,156 @@
-// AgentPanel.tsx - Agent 管理和可视化面板
+// AgentPanel.tsx - 接入 API 的 Agent 面板
 
 import { createSignal, For, Show } from "solid-js"
+import { startAgentTask, type AgentTask } from "../../stores/api"
+import "./agent-styles.css"
 
-export interface AgentInfo {
-  id: string
-  name: string
-  type: "build" | "plan" | "compose"
-  status: "idle" | "running" | "completed" | "error"
-  progress: number
-  currentTask?: string
-  steps: AgentStep[]
-}
-
-export interface AgentStep {
-  id: string
-  name: string
-  status: "pending" | "running" | "completed" | "error"
-  duration?: number
-}
+const agentTypes = [
+  { id: "build" as const, icon: "🔨", label: "Build", desc: "完整工具权限，用于开发" },
+  { id: "plan" as const, icon: "📋", label: "Plan", desc: "只读分析模式，代码探索" },
+  { id: "compose" as const, icon: "🎼", label: "Compose", desc: "编排模式，specs-driven" },
+]
 
 export function AgentPanel() {
-  const [agents, setAgents] = createSignal<AgentInfo[]>([
-    {
-      id: "1",
-      name: "build",
-      type: "build",
-      status: "idle",
-      progress: 0,
-      steps: [
-        { id: "1", name: "分析需求", status: "pending" },
-        { id: "2", name: "编写代码", status: "pending" },
-        { id: "3", name: "运行测试", status: "pending" },
-      ]
-    }
-  ])
-  
-  const [selectedAgent, setSelectedAgent] = createSignal<string | null>(null)
+  const [tasks, setTasks] = createSignal<AgentTask[]>([])
+  const [input, setInput] = createSignal("")
+  const [selectedType, setSelectedType] = createSignal<AgentTask["type"]>("build")
 
-  // 启动 Agent
-  const startAgent = (type: AgentInfo["type"]) => {
-    const newAgent: AgentInfo = {
+  const startNewTask = async () => {
+    const type = selectedType()
+    const prompt = input().trim() || `执行 ${type} 任务`
+
+    // 创建临时任务
+    const tempTask: AgentTask = {
       id: Date.now().toString(),
-      name: type,
       type,
       status: "running",
       progress: 0,
-      currentTask: "准备中...",
+      currentStep: "启动中...",
       steps: [
-        { id: Date.now().toString(), name: "初始化", status: "running" },
-        { id: (Date.now() + 1).toString(), name: "执行任务", status: "pending" },
-        { id: (Date.now() + 2).toString(), name: "生成报告", status: "pending" },
-      ]
+        { name: "分析需求", status: "running" },
+        { name: "搜索上下文", status: "pending" },
+        { name: "执行任务", status: "pending" },
+        { name: "生成结果", status: "pending" },
+      ],
     }
-    setAgents([...agents(), newAgent])
-    
-    // 模拟执行
-    simulateAgentExecution(newAgent.id)
-  }
+    setTasks(prev => [...prev, tempTask])
+    setInput("")
 
-  // 模拟 Agent 执行
-  const simulateAgentExecution = (agentId: string) => {
-    const steps = ["初始化", "分析代码", "执行任务", "生成报告"]
-    let stepIndex = 0
-    
-    const interval = setInterval(() => {
-      setAgents(prev => prev.map(agent => {
-        if (agent.id !== agentId) return agent
-        
-        if (stepIndex < steps.length) {
-          const updatedSteps = [...agent.steps]
-          if (stepIndex > 0) {
-            updatedSteps[stepIndex - 1].status = "completed"
-            updatedSteps[stepIndex - 1].duration = 1000
-          }
-          if (stepIndex < steps.length) {
-            updatedSteps[stepIndex] = { ...updatedSteps[stepIndex], status: "running" }
-          }
-          
-          return {
-            ...agent,
-            currentTask: steps[stepIndex],
-            progress: Math.round((stepIndex / steps.length) * 100),
-            steps: updatedSteps
-          }
-        } else {
-          clearInterval(interval)
-          return {
-            ...agent,
-            status: "completed",
-            progress: 100,
-            currentTask: "完成",
-            steps: agent.steps.map(s => ({ ...s, status: "completed" as const, duration: 1000 }))
-          }
-        }
-      }))
-      
-      stepIndex++
-    }, 1500)
-  }
+    // 调用 API
+    const result = await startAgentTask(type, prompt, (progress) => {
+      setTasks(prev => prev.map(t =>
+        t.id === tempTask.id ? { ...t, ...progress } : t
+      ))
+    })
 
-  // 停止 Agent
-  const stopAgent = (agentId: string) => {
-    setAgents(prev => prev.map(a => 
-      a.id === agentId ? { ...a, status: "idle" } : a
+    setTasks(prev => prev.map(t =>
+      t.id === tempTask.id ? result : t
     ))
   }
 
-  const getAgentIcon = (type: AgentInfo["type"]) => {
-    switch (type) {
-      case "build": return "🔨"
-      case "plan": return "📋"
-      case "compose": return "🎼"
-    }
+  const stopTask = (id: string) => {
+    setTasks(prev => prev.map(t =>
+      t.id === id ? { ...t, status: "error" } : t
+    ))
   }
 
-  const getStatusColor = (status: AgentInfo["status"]) => {
-    switch (status) {
-      case "idle": return "var(--color-text-muted)"
-      case "running": return "var(--color-primary)"
-      case "completed": return "#10b981"
-      case "error": return "#ef4444"
-    }
+  const clearCompleted = () => {
+    setTasks(prev => prev.filter(t => t.status === "running"))
   }
 
   return (
     <div class="agent-panel">
-      {/* 顶部工具栏 */}
       <div class="agent-header">
         <h2>🤖 Agent 管理</h2>
         <div class="agent-actions">
-          <button class="action-btn" onClick={() => startAgent("build")}>
-            + Build
-          </button>
-          <button class="action-btn" onClick={() => startAgent("plan")}>
-            + Plan
-          </button>
-          <button class="action-btn" onClick={() => startAgent("compose")}>
-            + Compose
+          <button class="action-btn" onClick={clearCompleted} title="清除已完成">
+            🗑️ 清除
           </button>
         </div>
       </div>
 
-      {/* Agent 列表 */}
-      <div class="agent-list">
-        <For each={agents()}>
-          {(agent) => (
-            <div
-              class="agent-card"
-              classList={{ active: selectedAgent() === agent.id }}
-              onClick={() => setSelectedAgent(agent.id)}
-            >
-              <div class="agent-card-header">
-                <div class="agent-info">
-                  <span class="agent-icon">{getAgentIcon(agent.type)}</span>
-                  <span class="agent-name">{agent.name}</span>
-                </div>
-                <div class="agent-status" style={{ color: getStatusColor(agent.status) }}>
-                  {agent.status}
-                </div>
+      {/* Agent 类型选择 */}
+      <div class="agent-type-selector">
+        <For each={agentTypes}>
+          {(at) => (
+            <button class={`agent-type-card ${selectedType() === at.id ? "active" : ""}`}
+              onClick={() => setSelectedType(at.id)}>
+              <span class="type-icon">{at.icon}</span>
+              <span class="type-label">{at.label}</span>
+              <span class="type-desc">{at.desc}</span>
+            </button>
+          )}
+        </For>
+      </div>
+
+      {/* 输入区域 */}
+      <div class="agent-input-area">
+        <input type="text" class="agent-input"
+          placeholder="输入任务描述（可选）..."
+          value={input()}
+          onInput={(e) => setInput(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === "Enter" && startNewTask()} />
+        <button class="start-btn" onClick={startNewTask}>
+          🚀 启动 {agentTypes.find(a => a.id === selectedType())?.label}
+        </button>
+      </div>
+
+      {/* 任务列表 */}
+      <div class="agent-task-list">
+        <For each={tasks()}>
+          {(task) => (
+            <div class={`agent-task ${task.status}`}>
+              <div class="task-header">
+                <span class="task-icon">
+                  {agentTypes.find(a => a.id === task.type)?.icon || "🔧"}
+                </span>
+                <span class="task-type">{task.type}</span>
+                <span class="task-status-badge">{task.status}</span>
               </div>
 
-              {/* 进度条 */}
-              <Show when={agent.status === "running"}>
-                <div class="progress-bar">
-                  <div
-                    class="progress-fill"
-                    style={{ width: `${agent.progress}%` }}
-                  />
+              <Show when={task.status === "running"}>
+                <div class="task-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" style={{ width: `${task.progress}%` }} />
+                  </div>
+                  <span class="progress-text">{task.progress}%</span>
                 </div>
-                <div class="current-task">
-                  当前: {agent.currentTask}
+                <div class="task-current">
+                  <span class="current-step-label">当前: {task.currentStep}</span>
+                  <button class="stop-btn" onClick={() => stopTask(task.id)}>⏹ 停止</button>
                 </div>
               </Show>
 
-              {/* 操作按钮 */}
-              <div class="agent-card-actions">
-                <Show when={agent.status === "running"}>
-                  <button class="stop-btn" onClick={(e) => {
-                    e.stopPropagation()
-                    stopAgent(agent.id)
-                  }}>
-                    停止
-                  </button>
-                </Show>
-                <Show when={agent.status === "completed"}>
-                  <span class="completed-badge">✓ 完成</span>
-                </Show>
-              </div>
+              <Show when={task.status === "completed"}>
+                <div class="task-completed">
+                  <span class="completed-badge">✅ 完成 ({task.progress}%)</span>
+                </div>
+              </Show>
 
               {/* 步骤列表 */}
-              <Show when={selectedAgent() === agent.id}>
-                <div class="agent-steps">
-                  <For each={agent.steps}>
-                    {(step) => (
-                      <div class="step-item" classList={{ 
-                        running: step.status === "running",
-                        completed: step.status === "completed",
-                        error: step.status === "error"
-                      }}>
-                        <span class="step-icon">
-                          {step.status === "completed" ? "✓" : step.status === "running" ? "⚡" : "○"}
-                        </span>
-                        <span class="step-name">{step.name}</span>
-                        <Show when={step.duration}>
-                          <span class="step-duration">{step.duration}ms</span>
-                        </Show>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </Show>
+              <div class="task-steps">
+                <For each={task.steps}>
+                  {(step) => (
+                    <div class="step-item" classList={{ completed: step.status === "completed", running: step.status === "running", pending: step.status === "pending" }}>
+                      <span class="step-bullet">
+                        {step.status === "completed" ? "✓" : step.status === "running" ? "●" : "○"}
+                      </span>
+                      <span>{step.name}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
             </div>
           )}
         </For>
+
+        <Show when={tasks().length === 0}>
+          <div class="empty-state">
+            <div class="empty-icon">🤖</div>
+            <p>选择 Agent 类型并启动任务</p>
+          </div>
+        </Show>
       </div>
     </div>
   )
 }
-
-/* 样式在 new-styles.css 中 */

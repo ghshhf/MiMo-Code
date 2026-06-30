@@ -343,6 +343,29 @@ render(() => {
     })
   })
 
+  // 从 localStorage 恢复主题偏好（默认为深色）
+  try {
+    const savedSettings = localStorage.getItem("app-settings")
+    if (savedSettings) {
+      const { theme } = JSON.parse(savedSettings)
+      document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark")
+    } else {
+      document.documentElement.setAttribute("data-theme", "dark")
+    }
+  } catch {
+    document.documentElement.setAttribute("data-theme", "dark")
+  }
+
+  // 监听主题变化
+  window.addEventListener("storage", (e: StorageEvent) => {
+    if (e.key === "app-settings" && e.newValue) {
+      try {
+        const { theme } = JSON.parse(e.newValue)
+        document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark")
+      } catch {}
+    }
+  })
+
   return (
     <PlatformProvider value={platform}>
       <AppBaseProviders locale={locale.latest}>
